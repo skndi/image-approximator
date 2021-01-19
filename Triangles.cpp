@@ -113,8 +113,8 @@ void Triangles::rotate(int angleDeg) {
 		float currentCentroidX = centroids[currentCentroid].x;
 		float currentCentroidY = centroids[currentCentroid].y;
 
-		float xOut = ((cos(angle) * /*triangles[currentTriangle + i].position.x*/ currentTriangleX) - (sin(angle) * /*triangles[currentTriangle + i].position.y*/ currentTriangleY) + (/*centroids[currentCentroid].x*/ currentCentroidX) - (cos(angle) * (/*centroids[currentCentroid].x*/ currentCentroidX)) + (sin(angle) * (/*centroids[currentCentroid].y*/ currentCentroidY)));
-		float yOut = ((sin(angle) * /*triangles[currentTriangle + i].position.x*/ currentTriangleX) + (cos(angle) * /*triangles[currentTriangle + i].position.y*/ currentTriangleY) + (/*centroids[currentCentroid].y*/ currentCentroidY) - (sin(angle) * (/*centroids[currentCentroid].x*/ currentCentroidX)) - (cos(angle) * (/*centroids[currentCentroid].y*/ currentCentroidY)));
+		float xOut = ((cos(angle) * currentTriangleX) - (sin(angle) * currentTriangleY) + (currentCentroidX) - (cos(angle) * (currentCentroidX)) + (sin(angle) * (currentCentroidY)));
+		float yOut = ((sin(angle) * currentTriangleX) + (cos(angle) * currentTriangleY) + (currentCentroidY) - (sin(angle) * (currentCentroidX)) - (cos(angle) * (currentCentroidY)));
 
 		triangles[currentTriangle + i].position.x = xOut;
 		triangles[currentTriangle + i].position.y = yOut;
@@ -188,26 +188,6 @@ int Triangles::randInt(int variation) {
 	unif = std::uniform_real_distribution<float>(-variation, variation);
 	return unif(rng);
 }
-
-/*Triangles& Triangles::operator =(const Triangles& other) {
-
-	if (this != &other) {
-		this->rng = other.rng;
-		this->unif = other.unif;
-		this->triangles = other.triangles;
-		uint64_t timeSeed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-		std::seed_seq ss{ uint32_t(timeSeed & 0xffffffff), uint32_t(timeSeed >> 32) };
-		rng.seed(ss);
-	}
-
-	return *this;
-}
-
-Triangles::Triangles(const Triangles& other) {
-
-	*this = other;
-}
-*/
 
 int Triangles::getCount() {
 

@@ -1,7 +1,7 @@
 #include "HillClimbAlgorithm.h"
 
 
-HillClimbAlgorithm::Climber(std::string path, int limit, int mutationLimit) {
+HillClimbAlgorithm::HillClimbAlgorithm(std::string path, int limit, int mutationLimit) {
 
     name = path;
     for (int i = 0; i < 4; i++) {
@@ -25,13 +25,12 @@ HillClimbAlgorithm::Climber(std::string path, int limit, int mutationLimit) {
 
     sizeX = model.getSize().x;
     sizeY = model.getSize().y;
-    //model.flipVertically();
 
     sf::Context context;
     sf::Texture::bind(&model);
-    mRed = new GLubyte[sizeX * sizeY]();
-    mGreen = new GLubyte[sizeX * sizeY]();
-    mBlue = new GLubyte[sizeX * sizeY]();
+    mRed = new GLubyte[static_cast<long long>(sizeX) * sizeY]();
+    mGreen = new GLubyte[static_cast<long long>(sizeX) * sizeY]();
+    mBlue = new GLubyte[static_cast<long long>(sizeX) * sizeY]();
 
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, mRed);
     glGetTexImage(GL_TEXTURE_2D, 0, GL_GREEN, GL_UNSIGNED_BYTE, mGreen);
