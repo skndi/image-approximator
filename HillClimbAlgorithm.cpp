@@ -1,28 +1,19 @@
 #include "HillClimbAlgorithm.h"
 
 
-HillClimbAlgorithm::HillClimbAlgorithm(std::string path, int limit, int mutationLimit) {
-
-    name = path;
-    for (int i = 0; i < 4; i++) {
-        name.pop_back();
-    }
-
+HillClimbAlgorithm::HillClimbAlgorithm(int limit, int mutationLimit) {
     currentFitness = 0;
-    modifiedFitness = 0;
     prevFitness = 0;
-    modifiedFitnessBest = 0;
-    mCount = 0;
-    imgNumber = 0;
-
-    this->limit = limit;
+    this->triangleLimit = limit;
     this->mutationLimit = mutationLimit;
+}
 
-    sf::Image temp;
-    temp.loadFromFile(path);
-    temp.flipVertically();
-    model.loadFromImage(temp);
+void HillClimbAlgorithm::loadBuffers(const sf::Texture& model) {
+    loadModelBuffers(model);
+    loadAlgorithmBuffers(model);
+}
 
+void HillClimbAlgorithm::loadModelBuffers(const sf::Texture& model) {
     sizeX = model.getSize().x;
     sizeY = model.getSize().y;
 
@@ -35,66 +26,77 @@ HillClimbAlgorithm::HillClimbAlgorithm(std::string path, int limit, int mutation
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, mRed);
     glGetTexImage(GL_TEXTURE_2D, 0, GL_GREEN, GL_UNSIGNED_BYTE, mGreen);
     glGetTexImage(GL_TEXTURE_2D, 0, GL_BLUE, GL_UNSIGNED_BYTE, mBlue);
+}
 
-    buffer = new Triangles(model.getSize().x, model.getSize().y);
-
+void HillClimbAlgorithm::loadAlgorithmBuffers(const sf::Texture& model) {
+    buffer = new Triangles(sizeX, sizeY);
     texture = new sf::RenderTexture();
-    sf::RectangleShape r(sf::Vector2f(768, 432));
-    r.setFillColor(sf::Color(sf::Color::White));
     texture->create(sizeX, sizeY);
-
-    texture->clear();
-    texture->draw(r);
-    texture->display();
-
     red = new GLubyte[sizeX * sizeY]();
     green = new GLubyte[sizeX * sizeY]();
     blue = new GLubyte[sizeX * sizeY]();
 }
 
-void HillClimbAlgorithm::start() {
-    window = new sf::RenderWindow(sf::VideoMode(sizeX, sizeY), "Climb!");
+void HillClimbAlgorithm::update() {
+    addTriangle();
+    std::pair<sf::VertexArray, float> bestSolution = mutateTriangle();
+    addOrDiscardToCanvas(bestSolution);
+}
 
-    
-    while (window->isOpen())
-    {
-        checkEvent();
-        
-        render();
+void HillClimbAlgorithm::render(sf::RenderTarget* target) const {
+    target->draw(currentTriangles);
+}
 
-        update();
+void HillClimbAlgorithm::addTriangle() {
+    buffer->addTriangle();
+}
 
-        if (abs(currentFitness - prevFitness) > 0.1) {
+std::pair<sf::VertexArray, float> HillClimbAlgorithm::mutateTriangle() {
+    float modifiedFitnessBest = 0;
+    int mutationCount = 0;
+    sf::VertexArray bestTriangles = buffer->getVertexArray();
 
-            prevFitness = currentFitness;
-            saveToImage();
-            imgNumber++;
-        }
-        if ((finalTriangles.getVertexCount() / 3) >= limit) {
-            saveToImage();
-            window->close();
-        }
+    while (mutationCount < mutationLimit) {
+        mutate();
+        keepOrDiscardMutation(modifiedFitnessBest, bestTriangles);
+        mutationCount++;
     }
+    return std::make_pair(bestTriangles, modifiedFitnessBest);
+}
+
+void HillClimbAlgorithm::addOrDiscardToCanvas(const std::pair<sf::VertexArray, float>& bestSolution) {
+
+    if (bestSolution.second > currentFitness) {
+        currentTriangles = bestSolution.first;
+        currentFitness = bestSolution.second;
+        std::cout << currentFitness << '\n';
+    }
+    else {
+        buffer->removeTriangle();
+    }
+    buffer->getVertexArray() = currentTriangles;
 }
 
 void HillClimbAlgorithm::mutate() {
-    
     buffer->mutate();
-    mCount++;
+    texture->clear();
+    buffer->render(texture);
+    texture->display();
 }
 
-void HillClimbAlgorithm::checkEvent() const {
+void HillClimbAlgorithm::keepOrDiscardMutation(float& modifiedFitnessBest, sf::VertexArray& bestTriangles) {
+    float modifiedFitness = calculateFitness();
 
-    sf::Event event;
-
-    while (window->pollEvent(event))
-    {
-        if (event.type == sf::Event::Closed) window->close();
-
+    if (modifiedFitness > modifiedFitnessBest) {
+        bestTriangles = buffer->getVertexArray();
+        modifiedFitnessBest = modifiedFitness;
+    }
+    else {
+        buffer->updateTriangles(bestTriangles);
     }
 }
 
-float HillClimbAlgorithm::calculateFitness(){
+float HillClimbAlgorithm::calculateFitness() const {
 
     sf::Texture::bind(&(texture->getTexture()));
 
@@ -103,102 +105,38 @@ float HillClimbAlgorithm::calculateFitness(){
     glGetTexImage(GL_TEXTURE_2D, 0, GL_BLUE, GL_UNSIGNED_BYTE, blue);
 
     float calculatedFitness = 0;
-
     int index = 0;
 
     for (int i = 0; i < sizeY; i++) {
-
         for (int j = 0; j < sizeX; j++) {
-
-            calculatedFitness += abs(*(mRed + index) - *(red + index));
-            calculatedFitness += abs(*(mGreen + index) - *(green + index));
-            calculatedFitness += abs(*(mBlue + index) - *(blue + index));
-
+            calculatedFitness += abs(*(mRed + index) - *(red + index)) +
+            abs(*(mGreen + index) - *(green + index)) + abs(*(mBlue + index) - *(blue + index));
             index++;
         }
-
     }
 
     calculatedFitness /= sizeX * sizeY * 3 * (float)2.55;
     return 100 - calculatedFitness;
 }
 
-void HillClimbAlgorithm::chooseMutation() {
-
-    if (modifiedFitnessBest > currentFitness) {
-
-        finalTriangles = modifiedTrianglesBest;
-        currentFitness = modifiedFitnessBest;
-        std::cout << currentFitness << '\n';
+bool HillClimbAlgorithm::imageIsDifferentEnough() const {
+    bool diff = false;
+    if (abs(currentFitness - prevFitness) > 0.1) {
+        diff = true;
     }
-
-    else {
-        buffer->removeTriangle();
-        buffer->getVertexArray() = finalTriangles;
-        modifiedTrianglesBest = finalTriangles;
-    }
+    return diff;
 }
 
-void HillClimbAlgorithm::update() {
-    while (mCount < mutationLimit) {
-        
-        mutate();
-
-        texture->clear();
-        texture->draw(buffer->getVertexArray());
-        texture->display();
-
-        modifiedFitness = calculateFitness();
-
-        if (modifiedFitness > modifiedFitnessBest) {
-
-            modifiedTrianglesBest = buffer->getVertexArray();
-            modifiedFitnessBest = modifiedFitness;
-
-        }
-        else buffer->getVertexArray() = modifiedTrianglesBest;
-        modifiedFitness = currentFitness;
+bool HillClimbAlgorithm::isComplete() const{
+    bool isReady = false;
+    if ((currentTriangles.getVertexCount() / 3) >= triangleLimit) {
+        isReady = true;
     }
-
-    chooseMutation();
-
-    modifiedFitness = 0;
-    modifiedFitnessBest = 0;
-
-    buffer->addTriangle();
-    mCount = 0;
-}
-
-void HillClimbAlgorithm::render() {
-
-    window->clear();
-    window->draw(finalTriangles);
-    window->display();
-}
-
-void HillClimbAlgorithm::saveToImage() {
-
-    sf::Image img;
-
-    img.create(sizeX, sizeY);
-    sf::RenderTexture tx;
-    tx.create(sizeX, sizeY);
-
-    tx.clear();
-    tx.draw(finalTriangles);
-    tx.display();
-
-    
-    img = tx.getTexture().copyToImage();
-
-    std::string str = name + "_image_" + std::to_string(imgNumber) + ".jpg";
-
-    img.saveToFile(str);
+    return isReady;
 }
 
 HillClimbAlgorithm::~HillClimbAlgorithm() {
 
-    delete window;
     delete texture;
     delete[] blue;
     delete[] red;

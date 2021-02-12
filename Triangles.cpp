@@ -13,38 +13,28 @@ Triangles::Triangles(int x, int y) {
 	std::seed_seq ss{ uint32_t(timeSeed & 0xffffffff), uint32_t(timeSeed >> 32) };
 	rng.seed(ss);
 
-	sf::Vector2f firstC = randVector2f0(sizeX, sizeY);
-	sf::Vector2f secondC = randVector2f(sf::Vector2f(firstC), 10);
-	sf::Vector2f thirdC = randVector2f(sf::Vector2f(firstC), 10);
-	sf::Color color = randColor();
-
-	sf::Vector2f centroid = sf::Vector2f(((firstC.x + secondC.x + thirdC.x) / 3), ((firstC.y + secondC.y + thirdC.y) / 3));
-	centroids.push_back(centroid);
-
-	triangles.append(sf::Vertex(firstC, color));
-	triangles.append(sf::Vertex(secondC, color));
-	triangles.append(sf::Vertex(thirdC, color));
-
 	currentTriangle = 0;
-	currentCentroid = 0;
+	currentCentroid = -1;
+}
+
+void Triangles::render(sf::RenderTarget* target) {
+	target->draw(triangles);
 }
 
 void Triangles::addTriangle() {
-
-	currentTriangle += 3;
-	currentCentroid += 1;
-
-	sf::Vector2f firstC = randVector2f0(sizeX, sizeY);
+	sf::Vector2f firstC = randVector2fScaled(sizeX, sizeY);
 	sf::Vector2f secondC = randVector2f(sf::Vector2f(firstC), 15);
 	sf::Vector2f thirdC = randVector2f(sf::Vector2f(firstC), 15);
 	sf::Color color = randColor();
-
 	sf::Vector2f centroid = sf::Vector2f(((firstC.x + secondC.x + thirdC.x) / 3), ((firstC.y + secondC.y + thirdC.y) / 3));
 	centroids.push_back(centroid);
 
 	triangles.append(sf::Vertex(firstC, color));
 	triangles.append(sf::Vertex(secondC, color));
 	triangles.append(sf::Vertex(thirdC, color));
+
+	currentTriangle += 3;
+	currentCentroid += 1;
 }
 
 void Triangles::removeTriangle() {
@@ -55,60 +45,43 @@ void Triangles::removeTriangle() {
 	triangles.resize(currentTriangle);
 }
 
-void Triangles::translate(int variation) {
+void Triangles::mutate() {
+	translate(5);
+	changeColor(5);
+	rotate(randInt(5));
+}
 
+void Triangles::translate(float variation) {
+	int currentTriangleVertex = currentTriangle - 3;
 	for (int i = 0; i < 3; i++) {
 		sf::Vector2f trans = randVector2f(-variation, +variation);
-
-		if (triangles[currentTriangle + i].position.x > sizeX) {
-
-			if (trans.x < 0) triangles[currentTriangle + i].position.x += trans.x;
-			else continue;
-
-		}
-		else if (triangles[currentTriangle + i].position.x < 0) {
-
-			if (trans.x > 0) triangles[currentTriangle + i].position.x += trans.x;
-			else continue;
-		}
-		else triangles[currentTriangle + i].position.x += trans.x;
-
-		if (triangles[currentTriangle + i].position.y > sizeY) {
-			if (trans.y < 0) {
-				triangles[currentTriangle + i].position.y += trans.y;
-			}
-			else continue;
-		}
-		else if (triangles[currentTriangle + i].position.y < 0) {
-			if (trans.y > 0) triangles[currentTriangle + i].position.y += trans.y;
-			else continue;
-		}
-		else triangles[currentTriangle + i].position.y += trans.y;
+		triangles[currentTriangleVertex + i].position.x += trans.x;
+		triangles[currentTriangleVertex + i].position.y += trans.y;
 	}
 }
 
-void Triangles::changeColor() {
-
-	int rValue = randInt(5);
-	int gValue = randInt(5);
-	int bValue = randInt(5);
+void Triangles::changeColor(int variation) {
+	int currentTriangleVertex = currentTriangle - 3;
+	int rValue = randInt(variation);
+	int gValue = randInt(variation);
+	int bValue = randInt(variation);
 
 	for (int i = 0; i < 3; i++) {
 
-		triangles[currentTriangle + i].color.r += rValue;
-		triangles[currentTriangle + i].color.g += gValue;
-		triangles[currentTriangle + i].color.b += bValue;
+		triangles[currentTriangleVertex + i].color.r += rValue;
+		triangles[currentTriangleVertex + i].color.g += gValue;
+		triangles[currentTriangleVertex + i].color.b += bValue;
 	}
 }
 
-void Triangles::rotate(int angleDeg) {
-
+void Triangles::rotate(float angleDeg) {
+	int currentTriangleVertex = currentTriangle - 3;
 	float angle = Utility::rad(angleDeg);
 
 	for (int i = 0; i < 3; i++) {
 
-		float currentTriangleX = triangles[currentTriangle + i].position.x;
-		float currentTriangleY = triangles[currentTriangle + i].position.y;
+		float currentTriangleX = triangles[currentTriangleVertex + i].position.x;
+		float currentTriangleY = triangles[currentTriangleVertex + i].position.y;
 
 		float currentCentroidX = centroids[currentCentroid].x;
 		float currentCentroidY = centroids[currentCentroid].y;
@@ -116,42 +89,30 @@ void Triangles::rotate(int angleDeg) {
 		float xOut = ((cos(angle) * currentTriangleX) - (sin(angle) * currentTriangleY) + (currentCentroidX) - (cos(angle) * (currentCentroidX)) + (sin(angle) * (currentCentroidY)));
 		float yOut = ((sin(angle) * currentTriangleX) + (cos(angle) * currentTriangleY) + (currentCentroidY) - (sin(angle) * (currentCentroidX)) - (cos(angle) * (currentCentroidY)));
 
-		triangles[currentTriangle + i].position.x = xOut;
-		triangles[currentTriangle + i].position.y = yOut;
+		triangles[currentTriangleVertex + i].position.x = xOut;
+		triangles[currentTriangleVertex + i].position.y = yOut;
 
 	}
 }
 
-void Triangles::mutate() {
-
-	translate(8);
-	changeColor();
-	rotate(randInt(7));
-	scale(4);
-}
-
-void Triangles::scale(int variation) {
-
-	sf::Vector2f scale = randVector2f(-variation, +variation);
-
+void Triangles::scale(float variation) {
+	int currentTriangleVertex = currentTriangle - 3;
+	sf::Vector2f scale = randVector2f(0.5, variation);
+	
 	for (int i = 0; i < 3; i++) {
-		
-		if (triangles[currentTriangle + i].position.x * scale.x > sizeX || triangles[currentTriangle + i].position.x * scale.x < 0) {}
-		else triangles[currentTriangle + i].position.x *= scale.x;
-
-		if (triangles[currentTriangle + i].position.y * scale.y > sizeY || triangles[currentTriangle + i].position.y * scale.y < 0) {}
-		else triangles[currentTriangle + i].position.y *= scale.y;
+			triangles[currentTriangleVertex + i].position.x *= scale.x;
+			triangles[currentTriangleVertex + i].position.y *= scale.y;
 	}
 }
 
-sf::Vector2f Triangles::randVector2f(int min, int max) {
+sf::Vector2f Triangles::randVector2f(float min, float max) {
 
 	unif = std::uniform_real_distribution<float>(min, max);
 
 	return sf::Vector2f(unif(rng), unif(rng));
 }
 
-sf::Vector2f Triangles::randVector2f(sf::Vector2f interval, int variation) {
+sf::Vector2f Triangles::randVector2f(sf::Vector2f interval, float variation) {
 	sf::Vector2f coords;
 
 	unif = std::uniform_real_distribution<float>(interval.x - variation, interval.x + variation);
@@ -163,7 +124,7 @@ sf::Vector2f Triangles::randVector2f(sf::Vector2f interval, int variation) {
 	return coords;
 }
 
-sf::Vector2f Triangles::randVector2f0(int xMax, int yMax) {
+sf::Vector2f Triangles::randVector2fScaled(int xMax, int yMax) {
 
 	unif = std::uniform_real_distribution<float>(0, 1);
 
@@ -194,7 +155,10 @@ int Triangles::getCount() {
 	return centroids.size();
 }
 
-sf::VertexArray& Triangles::getVertexArray() {
+void Triangles::updateTriangles(const sf::VertexArray& triangles) {
+	this->triangles = triangles;
+}
 
+sf::VertexArray Triangles::getVertexArray() {
 	return triangles;
 }

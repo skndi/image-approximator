@@ -1,7 +1,6 @@
 #pragma once
+#include <string>
 #include <SFML/Graphics.hpp>
-#include <random>
-#include <chrono>
 #include "Triangles.h"
 #include <SFML/OpenGL.hpp>
 #include <iostream>
@@ -10,55 +9,42 @@
 class HillClimbAlgorithm
 {
 private:
-	std::string name;
-
-	sf::VertexArray finalTriangles;
-	sf::VertexArray modifiedTrianglesBest;
-	Triangles* buffer;
-	
 	int sizeX;
 	int sizeY;
+
+	sf::VertexArray currentTriangles;
+	Triangles* buffer;
 
 	GLubyte* red;
 	GLubyte* green;
 	GLubyte* blue;
-	
 	GLubyte* mRed;
 	GLubyte* mGreen;
 	GLubyte* mBlue;
 
-	sf::Texture model;
-
 	float prevFitness;
 	float currentFitness;
-	float modifiedFitness;
-	float modifiedFitnessBest;
-	int mCount;
 	int mutationLimit;
-	int limit;
-	int imgNumber;
+	int triangleLimit;
 
 	sf::RenderTexture* texture;
-	sf::RenderWindow* window;
 
+	void loadModelBuffers(const sf::Texture& model);
+	void loadAlgorithmBuffers(const sf::Texture&);
+	void addTriangle();
+	std::pair<sf::VertexArray, float> mutateTriangle();
 	void mutate();
-
-	void render();
-
-	void update();
-
-	void checkEvent() const;
-
-	float calculateFitness();
-
-	void chooseMutation();
-
-	void saveToImage();
+	void addOrDiscardToCanvas(const std::pair<sf::VertexArray, float>& bestSolution);
+	void keepOrDiscardMutation(float& modifiedFitnessBest, sf::VertexArray& modifiedTriangles);
+	float calculateFitness() const;
 
 public:
-	HillClimbAlgorithm(std::string path, int limit, int mutationLimit);
-	void start();
+	HillClimbAlgorithm(int limit, int mutationLimit);
+	void render(sf::RenderTarget* target) const;
+	void update();
+	void loadBuffers(const sf::Texture& model);
+	bool imageIsDifferentEnough() const;
+	bool isComplete() const;
 	~HillClimbAlgorithm();
-	
 };
 

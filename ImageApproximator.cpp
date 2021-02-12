@@ -1,19 +1,83 @@
-﻿#include "HillClimbAlgorithm.h"
+#include "ImageApproximator.h"
 
-int main(int argc, char* argv[]) {
-	
-	if (argc < 4 || argc > 4) {
+ImageApproximator::ImageApproximator(std::string path, int limit, int mutationLimit) : algo(limit, mutationLimit){
+    name = createName(path);
+    loadModelFromImage(path);
+    algo.loadBuffers(model);
+    width = model.getSize().x;
+    height = model.getSize().y;
+    imgNumber = 0;
+}
 
-		std::cout << "Wrong arguments!\n";
-		std::cout << "Input the path to image, triangle count, and mutation limit of the triangles!";
-		return -1;
-	}
-	std::string path = argv[1];
-	int triangle_limit = std::stoi(argv[2]);
-	int mutationLimit = std::stoi(argv[3]);
+std::string ImageApproximator::createName(std::string path) const {
+    std::string name = path;
+    for (int i = 0; i < 4; i++) {
+        name.pop_back();
+    }
+    return name;
+}
 
-	HillClimbAlgorithm climb(path, triangle_limit, mutationLimit);
-	climb.start();
+void ImageApproximator::start() {
+    window = new sf::RenderWindow(sf::VideoMode(width, height), "Approximator");
+    while (window->isOpen()){
+        checkEvent();
+        update();
+        render();  
+    }
+}
 
-	return 0;
+void ImageApproximator::update() {
+    algo.update();
+    if (algo.imageIsDifferentEnough()) {
+        saveToImage();
+        imgNumber++;
+    }
+    if (algo.isComplete()) {
+        saveToImage();
+        imgNumber++;
+        window->close();
+    }
+}
+
+void ImageApproximator::render() {
+    window->clear();
+    algo.render(window);
+    window->display();
+}
+
+void ImageApproximator::checkEvent() const {
+
+    sf::Event event;
+
+    while (window->pollEvent(event))
+    {
+        if (event.type == sf::Event::Closed) window->close();
+
+    }
+}
+
+void ImageApproximator::saveToImage() const {
+    sf::Image img;
+    img.create(width, height);
+    sf::RenderTexture tx;
+    tx.create(width, height);
+
+    tx.clear();
+    algo.render(&tx);
+    tx.display();
+
+    img = tx.getTexture().copyToImage();
+    std::string str = name + "_image_" + std::to_string(imgNumber) + ".jpg";
+    img.saveToFile(str);
+}
+
+void ImageApproximator::loadModelFromImage(std::string path) {
+    sf::Image temp;
+    temp.loadFromFile(path);
+    temp.flipVertically();
+    model.loadFromImage(temp);
+}
+
+ImageApproximator::~ImageApproximator() {
+    delete window;
 }

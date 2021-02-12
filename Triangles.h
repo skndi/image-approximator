@@ -18,28 +18,27 @@ private:
 	int currentTriangle;
 	int currentCentroid;
 
-	sf::Vector2f randVector2f(int xMax, int yMax);
+	sf::Vector2f randVector2f(float xMax, float yMax);
 	float randFloat(float min, float max);
-	sf::Vector2f randVector2f0(int xMin, int xMax);
-	sf::Vector2f randVector2f(sf::Vector2f xInterval, int variation);
+	sf::Vector2f randVector2fScaled(int xMin, int xMax);
+	sf::Vector2f randVector2f(sf::Vector2f xInterval, float variation);
 	sf::Color randColor();
 	int randInt(int variation);
 
-	void translate(int variation);
-	void changeColor();
-	void rotate(int angle);
-	void scale(int variation);
+	void translate(float variation);
+	void changeColor(int variation);
+	void rotate(float angle);
+	void scale(float variation);
 
 public:
 	Triangles(int x, int y);
 
+	void render(sf::RenderTarget* target);
 	void addTriangle();
 	void removeTriangle();
-
+	void updateTriangles(const sf::VertexArray& triangles);
 	void mutate();
-
 	int getCount();
-
-	sf::VertexArray& getVertexArray();
+	sf::VertexArray getVertexArray();
 };
 
